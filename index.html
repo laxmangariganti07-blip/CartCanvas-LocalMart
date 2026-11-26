@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CartCanvas: LocalMart Linkup — Hyperlocal Neighborhood Marketplace</title>
+  <meta name="description" content="Digitalizing neighborhood grocers, bakeries, and stationers with scheduled doorstep delivery and curbside pickup." />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- =========================================================================
+       App Header & Top Navigation
+       ========================================================================= -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-section">
+        <div class="brand-logo-icon">🛒</div>
+        <div class="brand-title-wrap">
+          <div class="brand-title">CartCanvas <span>LocalMart</span></div>
+          <div class="brand-subtitle">Hyperlocal Neighborhood Marketplace</div>
+        </div>
+      </div>
+
+      <!-- Active Neighborhood Location Selector -->
+      <div class="location-pill" title="Current Neighborhood Service Hub">
+        <span class="pulse-dot"></span>
+        <span>📍 Indiranagar Hub &bull; <strong>Palm Grove Sector</strong></span>
+      </div>
+
+      <!-- View Switchers (Customer / Merchant / Split-Screen Demo) -->
+      <div class="view-switchers">
+        <button id="btnViewCustomer" class="view-btn active" title="Customer Shopping Storefront">
+          🛍️ Customer
+        </button>
+        <button id="btnViewMerchant" class="view-btn" title="Shopkeeper Fulfillment Cockpit">
+          🏪 Merchant
+        </button>
+        <button id="btnViewSplit" class="view-btn" title="Side-by-side Dual Demo Mode">
+          ⚡ Split Screen
+        </button>
+      </div>
+
+      <!-- Actions: 1-Click Demo & Cart -->
+      <div class="header-actions">
+        <button id="btnDemoFlow" class="demo-flow-btn" title="Execute full demo flow: Greenfield Groceries -> Oats & Sourdough -> Slot -> COD -> Merchant Split">
+          🚀 Run Demo Flow
+        </button>
+        <button id="btnResetDemo" class="btn-audio-test" style="border-radius: var(--radius-full);" title="Reset all orders and slot capacities to initial demo state">
+          🔄 Reset
+        </button>
+        <button id="btnOpenCart" class="cart-toggle-btn" aria-label="Open Shopping Basket">
+          <span>🛒 Cart</span>
+          <span id="cartBadge" class="cart-badge" style="display: none;">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       Main Application Views Container
+       ========================================================================= -->
+  <main class="main-content">
+
+    <!-- SPLIT-SCREEN CONTAINER (For dual side-by-side presentation) -->
+    <div id="splitViewContainer" class="split-screen-container" style="display: none;">
+      <div class="split-pane">
+        <div class="split-pane-header">
+          <span>🛍️ Customer Storefront & Live Tracker</span>
+          <span style="font-size: 0.78rem; color: var(--text-muted);">Real-Time Sync Active</span>
+        </div>
+        <div id="splitCustomerPane" class="split-pane-body">
+          <!-- Customer elements move here in split mode -->
+        </div>
+      </div>
+
+      <div class="split-pane">
+        <div class="split-pane-header">
+          <span>🏪 Merchant Fulfillment Cockpit</span>
+          <span style="font-size: 0.78rem; color: var(--success); font-weight: 700;">🟢 Live Orders Listener</span>
+        </div>
+        <div id="splitMerchantPane" class="split-pane-body">
+          <!-- Merchant elements move here in split mode -->
+        </div>
+      </div>
+    </div>
+
+    <!-- =======================================================================
+         CUSTOMER VIEW
+         ======================================================================= -->
+    <div id="customerViewContainer">
+
+      <!-- Customer Live Milestone Tracker (Appears when active order is placed) -->
+      <section id="orderTrackerSection" class="tracker-modal-wrap" style="display: none; margin-bottom: 1.5rem;">
+        <div class="tracker-header">
+          <div>
+            <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--primary);">Live Order Tracking</span>
+            <h3 style="font-size: 1.3rem; font-weight: 800;">Order <span id="trackerOrderId">#CC-0000</span></h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">From <strong id="trackerStoreName">Greenfield Groceries</strong> &bull; Scheduled Slot: <strong id="trackerSlotTime">Tomorrow 08:00 AM - 10:00 AM</strong></p>
+          </div>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <span id="trackerStatusBadge" class="badge-pill green" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">Received</span>
+            <button id="btnDismissTracker" class="close-btn" title="Minimize Tracker">✕</button>
+          </div>
+        </div>
+
+        <!-- Milestone Stepper Timeline -->
+        <div class="milestone-stepper">
+          <div id="trackerMilestoneBar" class="milestone-progress-bar" style="width: 0%;"></div>
+          
+          <div id="stepReceived" class="step-node active">
+            <div class="step-circle">1</div>
+            <span class="step-label">Received</span>
+          </div>
+          <div id="stepAccepted" class="step-node">
+            <div class="step-circle">2</div>
+            <span class="step-label">Accepted</span>
+          </div>
+          <div id="stepPacked" class="step-node">
+            <div class="step-circle">3</div>
+            <span class="step-label">Packed</span>
+          </div>
+          <div id="stepDispatch" class="step-node">
+            <div class="step-circle">4</div>
+            <span class="step-label">Out for Delivery</span>
+          </div>
+          <div id="stepDelivered" class="step-node">
+            <div class="step-circle">5</div>
+            <span class="step-label">Delivered</span>
+          </div>
+        </div>
+
+        <!-- Simulated Delivery Map Canvas -->
+        <div class="delivery-map-container">
+          <canvas id="deliveryMapCanvas"></canvas>
+        </div>
+
+        <!-- Delivery Boy Dispatch Info Card -->
+        <div id="riderInfoCard" class="rider-card-bar" style="display: none;">
+          <div class="rider-info">
+            <div class="rider-avatar">🛵</div>
+            <div>
+              <div class="rider-name" id="riderName">Ramesh Kumar</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);" id="riderVehicle">Honda Activa (KA-03-EB-4120) &bull; ⭐ 4.9</div>
+            </div>
+          </div>
+          <a id="btnCallRider" href="#" class="rider-phone-btn">📞 Call Rider</a>
+        </div>
+
+        <!-- WhatsApp Order Ping & Order Summary -->
+        <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+          <a id="btnWhatsappPing" href="#" target="_blank" class="whatsapp-btn">
+            <span>💬 Send Order Summary to Shopkeeper's WhatsApp</span>
+          </a>
+          <div id="trackerItemsSummary" style="background: var(--bg-subtle); padding: 1rem; border-radius: var(--radius-md);"></div>
+        </div>
+      </section>
+
+      <!-- Hyperlocal Shop Directory Section -->
+      <section id="storeDirectorySection">
+        
+        <!-- Hero Banner with Pooling Promo -->
+        <div class="hero-banner">
+          <h1 class="hero-title">Support Neighborhood Corners.<br />Guaranteed Predictable Delivery.</h1>
+          <p class="hero-desc">Your favorite local grocers, artisan bakeries, and stationers digitalized with transparent inventory, 2-hour delivery slot reservations, and curbside pickup.</p>
+          
+          <div class="pooling-alert-bar">
+            <span>🤝 <strong>Neighborhood Delivery Pooling:</strong> Residents in Palm Grove & Green Valley save ₹30 on combined delivery slots!</span>
+          </div>
+        </div>
+
+        <!-- Search, Sort & Category Filter Bar -->
+        <div class="search-filter-section" style="margin-top: 1.5rem; margin-bottom: 1.25rem;">
+          <div class="search-controls-row">
+            <div class="search-input-wrap">
+              <span class="search-icon">🔍</span>
+              <input id="searchInput" type="text" class="search-input" placeholder="Search organic oats, sourdough bread, rice, stationery..." />
+            </div>
+
+            <select id="sortSelect" class="sort-select" aria-label="Sort Stores">
+              <option value="distance">📍 Sort: Nearest First (Proximity)</option>
+              <option value="rating">★ Highest Customer Rating</option>
+              <option value="min_order">💰 Lowest Minimum Order</option>
+              <option value="delivery_speed">⚡ Fastest Neighborhood Slot</option>
+            </select>
+          </div>
+
+          <!-- Category Pills -->
+          <div id="categoryPills" class="category-pills-bar">
+            <button class="cat-pill active" data-category="All">All Neighborhood Shops (4)</button>
+            <button class="cat-pill" data-category="Organic Produce">🌾 Organic Produce</button>
+            <button class="cat-pill" data-category="Bakeries">🥖 Bakeries</button>
+            <button class="cat-pill" data-category="Groceries">🥬 Groceries & Staples</button>
+            <button class="cat-pill" data-category="Stationers">✏️ Stationers & Books</button>
+          </div>
+        </div>
+
+        <!-- Store Directory Cards Grid -->
+        <div id="storeGrid" class="store-grid">
+          <!-- Populated dynamically by app.js -->
+        </div>
+      </section>
+
+      <!-- Storefront Inventory Catalog Section (Appears when store is visited) -->
+      <section id="storefrontSection" style="display: none;">
+        <button id="btnBackToDirectory" class="btn-audio-test" style="margin-bottom: 1rem; border-radius: var(--radius-full);">
+          ← Back to All Neighborhood Shops
+        </button>
+
+        <!-- Current Store Header -->
+        <div id="currentStoreHeader" class="storefront-header">
+          <!-- Populated dynamically -->
+        </div>
+
+        <!-- Product Catalog 60 SKUs Grid -->
+        <div id="productGrid" class="product-grid">
+          <!-- Populated dynamically by app.js -->
+        </div>
+      </section>
+    </div>
+
+    <!-- =======================================================================
+         MERCHANT ORDER MANAGEMENT COCKPIT
+         ======================================================================= -->
+    <div id="merchantViewContainer" class="merchant-cockpit" style="display: none;">
+      
+      <!-- Merchant Header with Store Switcher & Sound -->
+      <div class="merchant-header-bar">
+        <div class="merchant-shop-selector">
+          <span style="font-size: 1.5rem;">🏪</span>
+          <div>
+            <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted);">Active Merchant Terminal</div>
+            <select id="merchantStoreSelect" class="merchant-select" aria-label="Select Storefront to Manage">
+              <option value="greenfield">Greenfield Groceries (Organics)</option>
+              <option value="dailybake">Daily Bake House (Artisan Bakery)</option>
+              <option value="sharma">Sharma Kirana (Daily Staples)</option>
+              <option value="corner">Corner Stationery (School & Office)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="merchant-audio-controls">
+          <button id="btnTestAudioChime" class="btn-audio-test" title="Play audible bell chime">
+            🔊 Test Chime
+          </button>
+          <button id="btnToggleSound" class="btn-audio-test" title="Toggle audio chime on/off">
+            🔊 Sound: On
+          </button>
+          <span class="badge-pill green" style="padding: 0.45rem 0.85rem;">🟢 Terminal Live</span>
+        </div>
+      </div>
+
+      <!-- Real-time Stats Counters -->
+      <div class="merchant-stats-row">
+        <div class="stat-card">
+          <div id="merchantStatNew" class="stat-val" style="color: #d97706;">0</div>
+          <div class="stat-label">Pending Accept</div>
+        </div>
+        <div class="stat-card">
+          <div id="merchantStatAccepted" class="stat-val" style="color: #2563eb;">0</div>
+          <div class="stat-label">Accepted / In Prep</div>
+        </div>
+        <div class="stat-card">
+          <div id="merchantStatPacked" class="stat-val" style="color: #0284c7;">0</div>
+          <div class="stat-label">Packed & Ready</div>
+        </div>
+        <div class="stat-card">
+          <div id="merchantStatDispatched" class="stat-val" style="color: #16a34a;">0</div>
+          <div class="stat-label">Out for Delivery</div>
+        </div>
+      </div>
+
+      <!-- Merchant Orders List with Large Action Buttons -->
+      <div id="merchantOrdersList" class="merchant-orders-list">
+        <!-- Populated dynamically by app.js -->
+      </div>
+    </div>
+  </main>
+
+  <!-- =========================================================================
+       Dynamic Slide-over Cart Drawer
+       ========================================================================= -->
+  <div id="cartOverlay" class="cart-overlay"></div>
+  <aside id="cartDrawer" class="cart-drawer">
+    <div class="cart-header">
+      <h3>Your Shopping Basket</h3>
+      <button id="btnCloseCart" class="close-btn" aria-label="Close Cart">✕</button>
+    </div>
+
+    <div class="cart-body">
+      <!-- Minimum Order Validation Bar -->
+      <div id="minOrderAlert" class="min-order-alert">
+        <div id="minOrderText" class="min-order-text">
+          <span>Minimum order progress</span>
+          <span>₹0 / ₹150</span>
+        </div>
+        <div class="progress-track">
+          <div id="minOrderProgress" class="progress-fill" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- Cart Items List -->
+      <div id="cartItemsList" class="cart-items-list">
+        <!-- Cart items rows rendered here -->
+      </div>
+
+      <hr style="border: none; border-top: 1px solid var(--border-subtle);" />
+
+      <!-- Delivery Method Toggle: Doorstep vs BOPIS Curbside Pickup -->
+      <div class="slot-section">
+        <div class="section-label">Fulfillment Mode</div>
+        <div class="delivery-type-toggle">
+          <button id="btnDeliveryDoorstep" class="del-toggle-btn active">
+            🚀 Scheduled Delivery
+          </button>
+          <button id="btnDeliveryBopis" class="del-toggle-btn">
+            🏬 Curbside Pickup (FREE)
+          </button>
+        </div>
+      </div>
+
+      <!-- Neighborhood Delivery Pooling: Apartment Selection -->
+      <div class="slot-section">
+        <div class="section-label">
+          <span>Apartment Society / Block</span>
+          <span style="font-size: 0.72rem; color: var(--accent); font-weight: 700;">Pooling Discount</span>
+        </div>
+        <select id="apartmentSelect" class="apartment-select">
+          <option value="Palm Grove Residency (Tower B)">Palm Grove Residency (Tower B) - Pooling Active 🔥</option>
+          <option value="Green Valley Heights (Tower 4)">Green Valley Heights (Tower 4) - Pooling Active 🔥</option>
+          <option value="Sunrise Towers (Tower A)">Sunrise Towers (Tower A) - Pooling Active 🔥</option>
+          <option value="Silver Oak Enclave">Silver Oak Enclave</option>
+          <option value="Independent House / Villa">Independent House / Street</option>
+        </select>
+        <div id="poolingAlertBadge" class="pooling-perk-badge" style="display: none;">
+          🤝 Active pooling discount applied!
+        </div>
+      </div>
+
+      <!-- 2-Hour Delivery Slot Reservation Engine -->
+      <div class="slot-section">
+        <div class="section-label">
+          <span>Select 2-Hour Delivery Window</span>
+          <span style="font-size: 0.72rem; color: var(--text-muted);">Max 5 orders / slot</span>
+        </div>
+        <div class="date-tabs">
+          <button id="dateTabToday" class="date-tab">Today</button>
+          <button id="dateTabTomorrow" class="date-tab active">Tomorrow</button>
+        </div>
+        <div id="slotGrid" class="slot-grid">
+          <!-- Populated dynamically with live capacity tracking -->
+        </div>
+      </div>
+
+      <!-- Payment Method Selection -->
+      <div class="slot-section">
+        <div class="section-label">Payment Method</div>
+        <div class="payment-options-grid">
+          <div id="payOptionCod" class="pay-card active">
+            💵 Cash on Delivery (COD)
+          </div>
+          <div id="payOptionUpi" class="pay-card">
+            📱 Simulated UPI QR
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bill Summary & Place Order CTA -->
+    <div id="cartFooter" class="cart-footer">
+      <div class="bill-row">
+        <span>Items Subtotal</span>
+        <span id="billSubtotal">₹0</span>
+      </div>
+      <div class="bill-row">
+        <span>Delivery Fee</span>
+        <span id="billDeliveryFee">₹30</span>
+      </div>
+      <div id="billDiscountRow" class="bill-row discount" style="display: none;">
+        <span>Neighborhood Pooling Discount</span>
+        <span id="billDiscount">-₹30</span>
+      </div>
+      <div class="bill-row total">
+        <span>Total Payable</span>
+        <span id="billTotal">₹0</span>
+      </div>
+
+      <button id="btnCheckout" class="btn-checkout" disabled>
+        Proceed to Place Order →
+      </button>
+    </div>
+  </aside>
+
+  <!-- =========================================================================
+       Simulated UPI QR Payment Modal
+       ========================================================================= -->
+  <div id="upiModalBackdrop" class="modal-backdrop">
+    <div class="upi-modal-card">
+      <h3 style="font-weight: 800; font-size: 1.2rem;">Scan & Pay with Any UPI App</h3>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">Zero convenience fee &bull; Direct settlement to neighborhood merchant</p>
+
+      <div class="upi-qr-frame">
+        <!-- SVG Generated QR Mockup -->
+        <svg class="upi-qr-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" fill="white" />
+          <!-- Corner Position Detection Patterns -->
+          <rect x="5" y="5" width="26" height="26" fill="black" />
+          <rect x="9" y="9" width="18" height="18" fill="white" />
+          <rect x="13" y="13" width="10" height="10" fill="black" />
+
+          <rect x="69" y="5" width="26" height="26" fill="black" />
+          <rect x="73" y="9" width="18" height="18" fill="white" />
+          <rect x="77" y="13" width="10" height="10" fill="black" />
+
+          <rect x="5" y="69" width="26" height="26" fill="black" />
+          <rect x="9" y="73" width="18" height="18" fill="white" />
+          <rect x="13" y="77" width="10" height="10" fill="black" />
+
+          <!-- Internal Data Modules -->
+          <rect x="36" y="8" width="6" height="6" fill="black" />
+          <rect x="46" y="8" width="6" height="6" fill="black" />
+          <rect x="56" y="8" width="6" height="6" fill="black" />
+          <rect x="36" y="20" width="8" height="6" fill="black" />
+          <rect x="50" y="20" width="8" height="6" fill="black" />
+          
+          <rect x="8" y="38" width="6" height="8" fill="black" />
+          <rect x="20" y="38" width="8" height="6" fill="black" />
+          <rect x="36" y="36" width="28" height="28" fill="#0f766e" rx="4" />
+          <text x="50" y="54" font-size="12" fill="white" font-weight="bold" text-anchor="middle">UPI</text>
+
+          <rect x="70" y="38" width="10" height="6" fill="black" />
+          <rect x="84" y="38" width="8" height="6" fill="black" />
+
+          <rect x="36" y="70" width="6" height="8" fill="black" />
+          <rect x="48" y="70" width="8" height="6" fill="black" />
+          <rect x="62" y="70" width="6" height="8" fill="black" />
+          <rect x="76" y="70" width="8" height="8" fill="black" />
+
+          <rect x="36" y="84" width="8" height="8" fill="black" />
+          <rect x="52" y="84" width="6" height="8" fill="black" />
+          <rect x="68" y="84" width="12" height="8" fill="black" />
+        </svg>
+
+        <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-main);" id="upiVpaDisplay">greenfield@upi</div>
+      </div>
+
+      <div style="font-size: 1.4rem; font-weight: 800; color: var(--primary);" id="upiAmountDisplay">₹0</div>
+
+      <div class="upi-timer-badge">
+        ⏳ QR Code expires in <span id="upiCountdown">03:00</span>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem; justify-content: center; font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">
+        <span>GPay</span> &bull; <span>PhonePe</span> &bull; <span>Paytm</span> &bull; <span>BHIM</span>
+      </div>
+
+      <button id="btnSimulateUpiPay" class="btn-simulate-pay">
+        Simulate Instant Payment Checkmark ✓
+      </button>
+
+      <button id="btnCloseUpiModal" class="btn-audio-test" style="border-radius: var(--radius-full); width: 100%;">
+        Cancel Payment
+      </button>
+    </div>
+  </div>
+
+  <!-- Audio Synthesizer & Application Scripts -->
+  <script src="js/seed-data.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
